@@ -28,6 +28,7 @@ Example output::
 
    git-[master] gbr@georg ~/devel/gitcodesmell> git commit
    Smelly change (set_trace):
+
    diff --git a/gitcodesmell.py b/gitcodesmell.py
    index b40559d..8629850 100755
    --- a/gitcodesmell.py
@@ -39,6 +40,7 @@ Example output::
             
         indexline = 0
         hunkstart = 0
+   
    Found 1 smelly change. Continue (y/N)? 
 
 

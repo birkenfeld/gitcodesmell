@@ -82,7 +82,7 @@ def main():
         elif line.startswith('+'):
             for rex, reason in smellies:
                 if rex.search(line):
-                    print 'Smelly change (%s):' % reason
+                    print 'Smelly change (%s):\n' % reason
                     diff = chunklines[indexline:indexline+3] + \
                         chunklines[hunkstart:i+4]
                     write_colored(diff)
@@ -93,6 +93,7 @@ def main():
             break
 
     if smelly_count:
+        print
         q = raw_input('Found %d smelly change%s. Continue (y/N)? ' %
                       (smelly_count, smelly_count != 1 and 's' or '')).lower()
         if q != 'y':
