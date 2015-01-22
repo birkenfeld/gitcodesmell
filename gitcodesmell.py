@@ -33,6 +33,9 @@ import fnmatch
 # reopen standard input
 sys.stdin = open('/dev/tty', 'r')
 
+# ansi color escape patterns
+ansi = re.compile('\x1b.*?m')
+
 # smelly patterns are tuples (regex, reason)
 nocommit_mark = (re.compile(r'XXX\(nocommit\)'), 'don\'t commit marker')
 print_stmt = (re.compile(r'^\+\s*print\b'), 'print statement')
@@ -57,35 +60,34 @@ if os.name != 'nt':
     SMELLY_STUFF['*'].append(windows_nl)
 
 
-def write_colored(diff):
-    os.popen('colordiff', 'w').write(''.join(diff))
-
-
 def main():
     smelly_count = 0
-    chunklines = os.popen('git diff --staged').readlines()
+    # we request always colored output so that we can print it nicely
+    # to the console
+    chunklines = os.popen('git diff --staged --color=always').readlines()
 
     indexline = 0
     hunkstart = 0
     for i, line in enumerate(chunklines):
-        if line.startswith('diff'):
+        cleanline = ansi.sub('', line)
+        if cleanline.startswith('diff'):
             indexline = i
             # new file: collect all smelly patterns for it
-            filename = line.split()[-1]
+            filename = cleanline.split()[-1]
             smellies = []
             for pat, smelly in SMELLY_STUFF.iteritems():
                 if not fnmatch.fnmatch(filename, pat):
                     continue
                 smellies.extend(smelly)
-        elif line.startswith('@@'):
+        elif cleanline.startswith('@@'):
             hunkstart = i
-        elif line.startswith('+'):
+        elif cleanline.startswith('+'):
             for rex, reason in smellies:
-                if rex.search(line):
+                if rex.search(cleanline):
                     print 'Smelly change (%s):\n' % reason
                     diff = chunklines[indexline:indexline+3] + \
                         chunklines[hunkstart:i+4]
-                    write_colored(diff)
+                    print ''.join(diff)
                     smelly_count += 1
                     break
             else:
@@ -93,7 +95,6 @@ def main():
             break
 
     if smelly_count:
-        print
         q = raw_input('Found %d smelly change%s. Continue (y/N)? ' %
                       (smelly_count, smelly_count != 1 and 's' or '')).lower()
         if q != 'y':
