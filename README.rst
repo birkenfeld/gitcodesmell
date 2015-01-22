@@ -24,5 +24,23 @@ Language-specific:
 
 You can add more of them by editing gitcodesmell.py's SMELLY_STUFF dictionary.
 
+Example output::
+
+   git-[master] gbr@georg ~/devel/gitcodesmell> git commit
+   Smelly change (set_trace):
+   diff --git a/gitcodesmell.py b/gitcodesmell.py
+   index b40559d..8629850 100755
+   --- a/gitcodesmell.py
+   @@ -64,6 +64,7 @@ def write_colored(diff):
+    def main():
+        smelly_count = 0
+        chunklines = os.popen('git diff --staged').readlines()
+   +    import pdb; pdb.set_trace()
+            
+        indexline = 0
+        hunkstart = 0
+   Found 1 smelly change. Continue (y/N)? 
+
+
 This hook is copyright 2015 by Georg Brandl, and can be
 distributed under the GNU GPL version 2 or later.
