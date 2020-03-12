@@ -19,6 +19,8 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
 # Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+from __future__ import print_function
+
 """warn about smelly changes in added code before allowing a commit
 
 When "smelly" changes would be committed, they will be printed out and you
@@ -29,6 +31,7 @@ import os
 import re
 import sys
 import fnmatch
+import subprocess
 
 # reopen standard input
 sys.stdin = open('/dev/tty', 'r')
@@ -47,11 +50,13 @@ traceback_print = (re.compile(r'\btraceback\.print_'), 'traceback print')
 vim_cmd = (re.compile(r':(w|wq|q|x)$', re.M), 'vim exit command')
 windows_nl = (re.compile(r'\r'), 'Windows newline')
 merge_marker = (re.compile(r'^(>>>>>>>|<<<<<<<)'), 'merge marker')
+print_macro = (re.compile(r'^\+\s*print(ln)?!\b'), 'print macro')
 
 # the master dict maps glob patterns to a list of smelly patterns
 SMELLY_STUFF = {
     '*.js': [debugger_stmt],
     '*.py': [print_stmt, zero_div, set_trace, bare_raise, traceback_print],
+    '*.rs': [print_macro],
     '*': [vim_cmd, merge_marker, nocommit_mark],
 }
 
@@ -64,7 +69,10 @@ def main():
     smelly_count = 0
     # we request always colored output so that we can print it nicely
     # to the console
-    chunklines = os.popen('git diff --staged --color=always').readlines()
+    out, err = subprocess.Popen('git diff --staged --color=always', shell=True, stdout=subprocess.PIPE).communicate()
+    if not isinstance(out, str):
+        out = out.decode('latin1')
+    chunklines = out.splitlines(True)
 
     indexline = 0
     hunkstart = 0
@@ -75,7 +83,7 @@ def main():
             # new file: collect all smelly patterns for it
             filename = cleanline.split()[-1]
             smellies = []
-            for pat, smelly in SMELLY_STUFF.iteritems():
+            for pat, smelly in SMELLY_STUFF.items():
                 if not fnmatch.fnmatch(filename, pat):
                     continue
                 smellies.extend(smelly)
@@ -84,10 +92,10 @@ def main():
         elif cleanline.startswith('+'):
             for rex, reason in smellies:
                 if rex.search(cleanline):
-                    print 'Smelly change (%s):\n' % reason
+                    print('Smelly change (%s):\n' % reason)
                     diff = chunklines[indexline:indexline+3] + \
                         chunklines[hunkstart:i+4]
-                    print ''.join(diff)
+                    print(''.join(diff))
                     smelly_count += 1
                     break
             else:
@@ -95,8 +103,10 @@ def main():
             break
 
     if smelly_count:
-        q = raw_input('Found %d smelly change%s. Continue (y/N)? ' %
-                      (smelly_count, smelly_count != 1 and 's' or '')).lower()
+        print('Found %d smelly change%s. Continue (y/N)? ' %
+              (smelly_count, smelly_count != 1 and 's' or ''), end='')
+        sys.stdout.flush()
+        q = sys.stdin.readline().lower().strip()
         if q != 'y':
             return smelly_count
     return 0
